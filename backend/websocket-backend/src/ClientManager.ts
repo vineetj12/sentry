@@ -282,7 +282,7 @@ while (true) {
   const combined = safeScore / diffMinutes;
 
   // Consider safe if combined >= threshold
-  return combined >= threshold&&false;
+  return combined >= threshold;
 }
 
   // ------------------------ close ------------------------
