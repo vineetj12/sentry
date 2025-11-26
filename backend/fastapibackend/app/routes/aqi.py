@@ -9,7 +9,6 @@ from ..config import get_settings
 from ..constants import DELHI_POLICE_STATIONS
 from ..schemas.aqi import AQIData, AQIResponse
 from ..services.waqi_service import fetch_aqi_from_waqi, categorize_aqi, get_all_station_names
-from ..services.gemini_service import fetch_aqi_from_gemini
 
 LOGGER = logging.getLogger(__name__)
 
@@ -22,7 +21,6 @@ async def get_aqi_for_all_stations():
     settings = get_settings()
     
     try:
-        # Fetch AQI data from WAQI API (much more reliable than Gemini)
         aqi_dict = await fetch_aqi_from_waqi(
             waqi_token=settings.waqi_api_token,
             max_concurrent=15,  # Reasonable concurrency for WAQI API
@@ -57,42 +55,6 @@ async def get_aqi_for_all_stations():
     except Exception as e:
         LOGGER.error(f"Failed to fetch AQI data: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch AQI data: {str(e)}")
-
-
-@router.get("/legacy", response_model=AQIResponse)
-async def get_aqi_for_all_stations_gemini():
-    """Legacy endpoint using Gemini API (for comparison - not recommended for production use)."""
-    settings = get_settings()
-    
-    try:
-        # Fetch AQI data from Gemini (keeping for backward compatibility)
-        aqi_dict = await fetch_aqi_from_gemini(
-            DELHI_POLICE_STATIONS,
-            settings.gemini_api_key,
-            settings.gemini_api_url
-        )
-        
-        # Build response
-        aqi_data_list = []
-        for station in DELHI_POLICE_STATIONS:
-            aqi_value = aqi_dict.get(station, 150.0)  # Default to 150 if not found
-            aqi_data_list.append(
-                AQIData(
-                    police_station=station,
-                    aqi=aqi_value,
-                    aqi_category=categorize_aqi(aqi_value)
-                )
-            )
-        
-        return AQIResponse(
-            timestamp=datetime.utcnow().isoformat() + "Z",
-            data=aqi_data_list
-        )
-    
-    except Exception as e:
-        LOGGER.error(f"Failed to fetch AQI data from Gemini: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to fetch AQI data: {str(e)}")
-
 
 @router.get("/station/{station_name}")
 async def get_aqi_for_station(station_name: str):
